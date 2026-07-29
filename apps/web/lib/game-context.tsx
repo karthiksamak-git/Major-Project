@@ -30,6 +30,8 @@ interface PlayerState {
   interests: string[];
   strengths: string[];
   suggestedTopics: string[];
+  capacityScore: number;
+  capacityLevel: "Novice" | "Apprentice" | "Specialist" | "Master";
 }
 
 interface GameContextType {
@@ -42,6 +44,7 @@ interface GameContextType {
   completeMission: (missionId: string, xpEarned: number) => void;
   addXp: (amount: number) => void;
   addCoins: (amount: number) => void;
+  updateCapacity: (delta: number) => void;
   refreshProfile: () => void;
   updateProfile: (updates: Partial<PlayerState>) => void;
 }
@@ -66,6 +69,8 @@ const defaultPlayer: PlayerState = {
   interests: [],
   strengths: [],
   suggestedTopics: [],
+  capacityScore: 35,
+  capacityLevel: "Apprentice",
 };
 
 const GameContext = createContext<GameContextType>({
@@ -78,6 +83,7 @@ const GameContext = createContext<GameContextType>({
   completeMission: () => {},
   addXp: () => {},
   addCoins: () => {},
+  updateCapacity: () => {},
   refreshProfile: () => {},
   updateProfile: () => {},
 });
@@ -347,6 +353,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setPlayer((prev) => ({ ...prev, coins: prev.coins + amount }));
   }, []);
 
+  const updateCapacity = useCallback((delta: number) => {
+    setPlayer((prev) => {
+      const newScore = Math.max(0, Math.min(100, (prev.capacityScore || 35) + delta));
+      let newLevel: "Novice" | "Apprentice" | "Specialist" | "Master" = "Apprentice";
+      if (newScore < 30) newLevel = "Novice";
+      else if (newScore <= 55) newLevel = "Apprentice";
+      else if (newScore <= 80) newLevel = "Specialist";
+      else newLevel = "Master";
+      return { ...prev, capacityScore: newScore, capacityLevel: newLevel };
+    });
+  }, []);
+
   const updateProfile = useCallback((updates: Partial<PlayerState>) => {
     setPlayer((prev) => ({ ...prev, ...updates }));
   }, []);
@@ -365,9 +383,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [tryApiCall]);
 
+  const value = {
+    player,
+    loading,
+    signIn,
+    signUp,
+    signOut,
+    demoSignIn,
+    completeMission,
+    addXp,
+    addCoins,
+    updateCapacity,
+    refreshProfile,
+    updateProfile,
+  };
+
   return (
     <GameContext.Provider
-      value={{ player, loading, signIn, signUp, signOut, demoSignIn, completeMission, addXp, addCoins, refreshProfile, updateProfile }}
+      value={value}
     >
       {children}
     </GameContext.Provider>
